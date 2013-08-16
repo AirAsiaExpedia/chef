@@ -31,7 +31,11 @@ require 'rubygems/version'
 require 'rubygems/dependency'
 require 'rubygems/spec_fetcher'
 require 'rubygems/platform'
-require 'rubygems/format'
+begin
+  require 'rubygems/format'
+rescue LoadError
+  require 'rubygems/package'
+end
 require 'rubygems/dependency_installer'
 require 'rubygems/uninstaller'
 require 'rubygems/specification'
@@ -114,7 +118,7 @@ class Chef
           # nil           returns nil if the gem on disk doesn't match the
           #               version constraints for +gem_dependency+
           def candidate_version_from_file(gem_dependency, source)
-            spec = Gem::Format.from_file_by_path(source).spec
+            spec = spec_from_file_by_path(source)
             if spec.satisfies_requirement?(gem_dependency)
               logger.debug {"#{@new_resource} found candidate gem version #{spec.version} from local gem package #{source}"}
               spec.version
@@ -204,6 +208,14 @@ class Chef
 
           def logger
             Chef::Log.logger
+          end
+
+          def spec_from_file_by_path(source)
+            if defined? Gem::Format
+              Gem::Format.from_file_by_path(source).spec
+            else
+              Gem::Package.new(source).spec
+            end
           end
 
         end
